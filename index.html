@@ -276,6 +276,25 @@
             box-shadow: 0 10px 30px rgba(45, 106, 79, 0.05);
         }
 
+        /* Drag and Drop Styles */
+        .drag-handle { 
+            cursor: grab; 
+            color: #adb5bd;
+            transition: color 0.2s;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        .drag-handle:hover { color: var(--comedu-main); }
+        .sortable-ghost { 
+            opacity: 0.5; 
+            background-color: #f8f9fa !important; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        .sortable-drag { 
+            background-color: white !important; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+            border-radius: 12px;
+        }
+
         /* ปรับ Footer เป็นสีเขียวเข้ม เพื่อความเด่นชัด */
         .footer {
             margin-top: auto;
@@ -454,7 +473,7 @@
     <div id="adminView" class="d-none">
         <div class="container my-5">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-5 gap-3">
-                <h2 class="fw-bold mb-0 text-gradient"><i class="fas fa-cogs me-2"></i> ระบบจัดการสื่อ (Admin)</h2>
+                <h2 class="fw-bold mb-0 text-gradient" id="adminTitle"><i class="fas fa-cogs me-2"></i> ระบบจัดการสื่อ (Admin)</h2>
                 <div class="d-flex gap-2 w-100 w-md-auto">
                     <button class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-semibold bg-white flex-grow-1 flex-md-grow-0 btn-shine" onclick="openSettingsModal()">
                         <i class="fas fa-sliders-h me-2"></i> ตั้งค่าเว็บ
@@ -465,11 +484,17 @@
                 </div>
             </div>
 
+            <div class="alert alert-info border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center gap-3">
+                <i class="fas fa-info-circle fs-4"></i> 
+                <div><strong>เคล็ดลับ:</strong> คุณสามารถคลิกค้างที่ไอคอน <i class="fas fa-grip-vertical mx-1"></i> แล้ว <strong>ลากเพื่อจัดเรียงลำดับ</strong> ของสื่อได้เลย ลำดับจะถูกบันทึกอัตโนมัติ</div>
+            </div>
+
             <div class="admin-card p-4 p-md-5">
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0" id="adminTable">
                         <thead class="text-secondary" style="border-bottom: 2px solid #e2e8f0;">
                             <tr>
+                                <th class="fw-semibold pb-3 text-center" style="width: 60px;">จัดเรียง</th>
                                 <th class="fw-semibold pb-3">ปกสื่อ</th>
                                 <th class="fw-semibold pb-3">รายละเอียด</th>
                                 <th class="fw-semibold pb-3">หมวดหมู่/วิชา</th>
@@ -703,6 +728,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+    <!-- เพิ่มไลบรารี SortableJS สำหรับจัดการระบบลากวาง -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     
     <script>
         // ==========================================
@@ -713,6 +740,7 @@
         var allMedia = [];
         var siteSettings = {};
         var loginModalInstance, mediaModalInstance, settingsModalInstance, viewDetailModalInstance;
+        var sortableInstance = null; // ตัวแปรเก็บ Instance ของ Sortable
 
         document.addEventListener("DOMContentLoaded", function() {
             loginModalInstance = new bootstrap.Modal(document.getElementById('loginModal'));
@@ -847,6 +875,8 @@
                 if(sessionStorage.getItem('adminLogged') !== 'true') return showLogin();
                 document.getElementById('homeView').classList.add('d-none');
                 document.getElementById('adminView').classList.remove('d-none');
+                // เรียก init Sortable เมื่อสลับมาหน้า Admin
+                setTimeout(initSortable, 100); 
             } else {
                 document.getElementById('homeView').classList.remove('d-none');
                 document.getElementById('adminView').classList.add('d-none');
@@ -1019,8 +1049,10 @@
                 var pinBtnClass = isPinned ? 'btn-warning text-dark' : 'btn-outline-secondary';
                 var safeThumb = item.Thumbnail ? formatImageUrl(item.Thumbnail) : 'https://placehold.co/50';
                 
+                // เพิ่ม data-id เพื่อใช้สำหรับการอ้างอิงตอนลากวาง และเพิ่มคอลัมน์ลาก (Drag Handle)
                 html += 
-                    '<tr class="bg-white border-bottom">' +
+                    '<tr class="bg-white border-bottom" data-id="' + item.ID + '">' +
+                        '<td class="text-center align-middle drag-handle" title="คลิกค้างเพื่อลากจัดเรียง"><i class="fas fa-grip-vertical fs-5"></i></td>' +
                         '<td><img src="' + safeThumb + '" width="60" height="60" class="rounded-3 object-fit-cover shadow-sm border"></td>' +
                         '<td><strong class="text-dark d-block mb-1 fs-6">' + item.Title + '</strong><a href="' + item.Link + '" target="_blank" class="text-primary text-decoration-none small fw-semibold bg-primary bg-opacity-10 px-2 py-1 rounded"><i class="fas fa-external-link-alt me-1"></i> ดูลิงก์สื่อ</a></td>' +
                         '<td><span class="badge badge-soft-primary px-2 py-1 mb-1 d-inline-block">' + item.Category + '</span><br><span class="text-muted small fw-medium">' + item.Subject + ' (' + item.Level + ')</span></td>' +
@@ -1034,6 +1066,54 @@
                     '</tr>';
             });
             tbody.innerHTML = html;
+
+            // ตรวจสอบและตั้งค่า Sortable ทันทีหลังจากที่ render เสร็จ
+            if (document.getElementById('adminView').classList.contains('d-none') === false) {
+                initSortable();
+            }
+        }
+
+        // ฟังก์ชันเริ่มต้นการทำงานของ SortableJS สำหรับการลากวาง
+        function initSortable() {
+            var tbody = document.getElementById('adminTableBody');
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+            sortableInstance = new Sortable(tbody, {
+                handle: '.drag-handle', // กำหนดจุดที่จับลากได้
+                animation: 150, // ความสมูทตอนแอนิเมชัน
+                ghostClass: 'sortable-ghost', // คลาสตอนกำลังลาก
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    // เมื่อลากวางเสร็จสิ้น ดึงลำดับ ID ใหม่ทั้งหมด
+                    var rows = tbody.querySelectorAll('tr');
+                    var newOrderIds = Array.from(rows).map(row => row.getAttribute('data-id'));
+                    saveNewOrder(newOrderIds);
+                }
+            });
+        }
+
+        // ส่งลำดับใหม่ไปบันทึกที่ Backend
+        function saveNewOrder(newOrderIds) {
+            var titleEl = document.getElementById('adminTitle');
+            var originalTitle = titleEl.innerHTML;
+            titleEl.innerHTML = '<i class="fas fa-sync-alt fa-spin text-warning me-2"></i> กำลังบันทึกลำดับ...';
+            
+            callBackend('reorderMedia', { orderedIds: newOrderIds })
+                .then(function(res) {
+                    if (res.success) {
+                        titleEl.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i> บันทึกลำดับสำเร็จ';
+                        setTimeout(() => { titleEl.innerHTML = originalTitle; fetchInitialData(); }, 1500);
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.message, 'error');
+                        titleEl.innerHTML = originalTitle;
+                        fetchInitialData(); // รีเซ็ตตารางกลับไปลำดับเดิม
+                    }
+                })
+                .catch(function(err) {
+                    Swal.fire('ระบบขัดข้อง', 'ไม่สามารถบันทึกลำดับใหม่ได้', 'error');
+                    titleEl.innerHTML = originalTitle;
+                });
         }
 
         function toggleFileInputs() {
