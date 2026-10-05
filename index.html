@@ -381,12 +381,18 @@
                 <i class="fas fa-bars fs-3 text-white"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center mt-3 mt-lg-0">
+                <ul class="navbar-nav ms-auto align-items-center mt-3 mt-lg-0 gap-3">
+                    <li class="nav-item w-100 w-lg-auto text-center">
+                        <!-- ปุ่มแบบสอบถามความพึงพอใจ (นำลิงก์ Google Forms มาใส่ที่ href) -->
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSc-vcVgQEqk2p4Pg6jpWrFa6uAb5upRMmXZ-pLwhot1UySvjg/viewform?usp=publish-editor" target="_blank" class="btn btn-warning rounded-pill px-4 py-2 fw-semibold w-100 w-lg-auto shadow-sm btn-shine text-dark" style="border: none; background: linear-gradient(135deg, #F6D365 0%, #FDA085 100%); color: white !important;">
+                            <i class="fas fa-clipboard-list me-2"></i> แบบสอบถามความพึงพอใจ
+                        </a>
+                    </li>
                     <li class="nav-item w-100 w-lg-auto text-center">
                         <button class="btn btn-outline-light rounded-pill px-4 py-2 fw-semibold w-100 w-lg-auto btn-shine" id="btnAdminLogin" onclick="showLogin()" style="border-width: 2px;">
                             <i class="fas fa-lock me-2"></i> ผู้ดูแลระบบ
                         </button>
-                        <div id="adminMenu" class="d-none d-flex gap-2 flex-column flex-lg-row">
+                        <div id="adminMenu" class="d-none d-flex gap-2 flex-column flex-lg-row mt-2 mt-lg-0">
                             <button class="btn btn-light text-success rounded-pill px-4 py-2 fw-semibold btn-shine" onclick="switchView('admin')" style="border: none;">
                                 <i class="fas fa-tachometer-alt me-2"></i> แดชบอร์ด
                             </button>
@@ -426,6 +432,7 @@
                     <option value="เกมการศึกษา">เกมการศึกษา</option>
                     <option value="บทเรียน">บทเรียน</option>
                     <option value="ใบงาน">ใบงาน</option>
+                    <option value="ใบงานวัดทักษะ">ใบงานวัดทักษะ</option>
                     <option value="PowerPoint">PowerPoint</option>
                     <option value="วิดีโอ">วิดีโอ</option>
                     <option value="เอกสาร PDF">เอกสาร PDF</option>
@@ -573,6 +580,7 @@
                                     <option value="เกมการศึกษา">เกมการศึกษา</option>
                                     <option value="บทเรียน">บทเรียน</option>
                                     <option value="ใบงาน">ใบงาน</option>
+                                    <option value="ใบงานวัดทักษะ">ใบงานวัดทักษะ</option>
                                     <option value="PowerPoint">PowerPoint</option>
                                     <option value="วิดีโอ">วิดีโอ</option>
                                     <option value="เอกสาร PDF">เอกสาร PDF</option>
@@ -892,13 +900,15 @@
             var total = allMedia.length;
             var games = allMedia.filter(function(m) { return m.Category === 'เกมการศึกษา'; }).length;
             var docs = allMedia.filter(function(m) { return ['ใบงาน', 'เอกสาร PDF', 'PowerPoint'].indexOf(m.Category) > -1; }).length;
-            var vids = allMedia.filter(function(m) { return m.Category === 'วิดีโอ'; }).length;
+            // เปลี่ยนการคำนวณจากการนับวิดีโอ เป็นการนับหมวดหมู่ "ใบงานวัดทักษะ" หรือมีคำว่า "วัดทักษะ" ในชื่อหรือแท็ก
+            var skillWorksheets = allMedia.filter(function(m) { return m.Category === 'ใบงานวัดทักษะ' || (m.Title && m.Title.indexOf('วัดทักษะ') > -1) || (m.Tags && m.Tags.indexOf('วัดทักษะ') > -1); }).length;
 
             var statData = [
                 { title: 'สื่อทั้งหมด', count: total, color: 'linear-gradient(135deg, #8E54E9, #6a35c9)', icon: 'fa-boxes' },
                 { title: 'เกมการศึกษา', count: games, color: 'linear-gradient(135deg, #d97706, #fbbf24)', icon: 'fa-gamepad' },
                 { title: 'เอกสาร/สไลด์', count: docs, color: 'linear-gradient(135deg, #0369a1, #38bdf8)', icon: 'fa-file-alt' },
-                { title: 'วิดีโอ', count: vids, color: 'linear-gradient(135deg, #6d28d9, #a78bfa)', icon: 'fa-video' }
+                // เปลี่ยนข้อความ, ค่า และไอคอนแสดงผล สำหรับใบงานวัดทักษะ
+                { title: 'ใบงานวัดทักษะ', count: skillWorksheets, color: 'linear-gradient(135deg, #e11d48, #be123c)', icon: 'fa-clipboard-check' }
             ];
 
             var html = '';
